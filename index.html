@@ -15,11 +15,13 @@
 
     <script>
         window.onload = () => {
-            // Используем имя конструктора, которое мы определили ранее
-            const LccViewer = window.LCC.LccViewer || (window.LCC.default && window.LCC.default.LccViewer);
+            console.log("Запуск вьюера...");
+
+            // 1. Проверка библиотеки
+            const LccViewer = window.LCC?.LccViewer || window.LCC?.default?.LccViewer;
 
             if (!LccViewer) {
-                console.error("Ошибка: Библиотека LCC не загружена.");
+                console.error("Критическая ошибка: Библиотека LCC не найдена. Проверьте файл lcc-0.5.5.umd.js");
                 return;
             }
 
@@ -29,20 +31,28 @@
                 appKey: 'test'
             });
 
-            // Прямая ссылка на вашу папку в Netlify (обязательно со слешем в конце)
-            const modelBaseUrl = "https://capable-crisp-77c17e.netlify.app/";
+            // 2. Настройка пути к модели
+            // Если вы загружали ПАПКУ на Netlify, проверьте, не нужно ли добавить её имя в конец ссылки
+            const netlifyUrl = "https://capable-crisp-77c17e.netlify.app/";
+            const metaPath = "meta.lcc"; 
 
-            // Загружаем основной файл. SDK сам найдет data.bin и прочее по этому же адресу.
-            lccManager.loadLcc(modelBaseUrl + "meta.lcc").then(() => {
-                console.log("Модель успешно загружена из Netlify!");
-                
-                // Устанавливаем камеру (координаты из вашего файла)
-                if (lccManager.setCameraLookAt) {
-                    lccManager.setCameraLookAt(-65, -30, 5);
-                }
-            }).catch(err => {
-                console.error("Ошибка при загрузке модели:", err);
-            });
+            console.log("Попытка загрузки модели по адресу:", netlifyUrl + metaPath);
+
+            // 3. Запуск загрузки
+            lccManager.loadLcc(netlifyUrl + metaPath)
+                .then(() => {
+                    console.log("Ура! Модель успешно загружена.");
+                    // Установка камеры в рабочую зону
+                    if (lccManager.setCameraLookAt) {
+                        lccManager.setCameraLookAt(-65, -30, 5);
+                    }
+                })
+                .catch(err => {
+                    console.error("Ошибка загрузки модели. Возможные причины:");
+                    console.error("1. Файл meta.lcc не найден по ссылке (404)");
+                    console.error("2. Проблема с CORS на стороне Netlify");
+                    console.log("Детали ошибки:", err);
+                });
         };
     </script>
 </body>
