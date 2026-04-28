@@ -14,7 +14,7 @@
     <script src="lcc-0.5.5.umd.js"></script>
 
     <script>
-        // Карта идентификаторов файлов с вашего Google Диска
+        // Карта ID файлов с вашего Google Диска
         const driveFiles = {
             'meta.lcc': '1BN6XDgJleJa2tThXf4Oyb3guADVQF1Du',
             'data.bin': '1RpMXbry5IDuqmUrG_ju2VtijwZ4oR6ji',
@@ -24,28 +24,54 @@
             'environment.bin': '1y32bDivHcjJrerIHhLCJvF-LmqtAGSLA'
         };
 
-        const getDownloadUrl = (id) => `https://docs.google.com/uc?export=download&id=${id}`;
+        // Настройка прокси для обхода CORS (защита Google Диска)
+        const proxy = 'https://cors-anywhere.herokuapp.com/';
+        const getUrl = (fileName) => {
+            const id = driveFiles[fileName];
+            if (!id) return fileName;
+            return proxy + `https://docs.google.com/uc?export=download&id=${id}`;
+        };
 
         window.onload = () => {
-            // Инициализация менеджера
-            const lccManager = new LCC.LccManager({
+            console.log("Библиотека LCC:", window.LCC);
+
+            // 1. Ищем правильный конструктор в объекте LCC
+            const LccManager = LCC.LccManager || (LCC.default && LCC.default.LccManager);
+
+            if (!LccManager) {
+                console.error("Ошибка: LccManager не найден в библиотеке. Проверьте подключение скрипта.");
+                return;
+            }
+
+            // 2. Инициализация менеджера
+            const lccManager = new LccManager({
                 container: document.getElementById('viewer'),
-                appId: 'tilda-test',
-                appKey: 'test-key'
+                appId: 'tilda-integration',
+                appKey: 'test'
             });
 
-            // Подменяем стандартный метод загрузки, чтобы он понимал ссылки Google Drive
-            const originalLoad = lccManager.loadLcc.bind(lccManager);
-            
-            // Загружаем основной файл метаданных
-            const metaUrl = getDownloadUrl(driveFiles['meta.lcc']);
-            
+            // 3. Настройка параметров рендеринга для вашей модели (5.6 млн точек)
+            if (lccManager.setRenderConfig) {
+                lccManager.setRenderConfig({
+                    pointBudget: 6000000,
+                    pointSize: 1.2
+                });
+            }
+
+            // 4. Загрузка модели. 
+            // Мы передаем meta.lcc, а SDK сам запросит остальные файлы.
+            const metaUrl = getUrl('meta.lcc');
+
             lccManager.loadLcc(metaUrl).then(() => {
-                console.log("Метаданные загружены. Начинается рендеринг...");
-                // Фокусируемся на модели (координаты из вашего meta.lcc)
-                lccManager.setCameraLookAt(-65, -30, 5);
+                console.log("Модель успешно инициализирована!");
+                
+                // Фокусируем камеру на центре вашей модели (данные из вашего meta.lcc)
+                if (lccManager.setCameraLookAt) {
+                    lccManager.setCameraLookAt(-65, -30, 5);
+                }
             }).catch(err => {
-                console.error("Ошибка загрузки модели:", err);
+                console.error("Ошибка при загрузке модели:", err);
+                alert("Ошибка загрузки. Проверьте доступ к прокси CORS.");
             });
         };
     </script>
