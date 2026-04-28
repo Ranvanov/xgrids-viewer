@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LCC Viewer</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        #container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+
+    <script src="lcc-0.5.5.umd.js"></script>
+
+    <script>
+        // Инициализация после загрузки страницы
+        window.onload = () => {
+            try {
+                // Создаем менеджер (в UMD версии объект LCC доступен глобально)
+                const lccManager = new LCC.LccManager({
+                    container: document.getElementById('container'),
+                    appId: 'test-app', // Любое имя
+                    appKey: 'test-key'  // Обычно SDK требует ключ, но для теста попробуем так
+                });
+
+                // Загружаем ваш файл (замените 'model.lcc' на точное имя вашего файла)
+                lccManager.loadLcc('ВАШ_ФАЙЛ.lcc'); 
+                
+                console.log("SDK инициализирован");
+            } catch (e) {
+                console.error("Ошибка:", e);
+            }
+        };
+    </script>
+</body>
+</html>
