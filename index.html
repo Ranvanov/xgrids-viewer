@@ -14,29 +14,14 @@
     <script src="lcc-0.5.5.umd.js"></script>
 
     <script>
-        const driveFiles = {
-            'meta.lcc': '1BN6XDgJleJa2tThXf4Oyb3guADVQF1Du',
-            'data.bin': '1RpMXbry5IDuqmUrG_ju2VtijwZ4oR6ji',
-            'index.bin': '1Fhl-6aCq99Ip4-stPLiKyplmmMPE4no9',
-            'shcoef.bin': '1kAu_5zD6r5E-n2uhUtoBauqUG5UM9aeR',
-            'collision.bin': '1tWtArFRfUsIaAa1WKiVRICqsavrkbqKg',
-            'environment.bin': '1y32bDivHcjJrerIHhLCJvF-LmqtAGSLA',
-            'attrs.lcp': '1dEYSXmC0kyGfV8ZMu0fHr1YhjYsvYkYR',
-            'collision.lci': '1PTE9fcWvGtLmZfxi1gSl5-jd4LfD4S46'
-        };
-
-        // Используем более мощный прокси-сервер для обхода 403 ошибки
-        const proxy = 'https://cors-anywhere.herokuapp.com/';
-        
-        const getUrl = (fileName) => {
-            const id = driveFiles[fileName];
-            if (!id) return fileName;
-            // Обновленный формат ссылки для Google Диска
-            return proxy + `https://drive.google.com/uc?id=${id}&export=download`;
-        };
-
         window.onload = () => {
-            const LccViewer = window.LCC.LccViewer || window.LCC.default.LccViewer;
+            // Используем имя конструктора, которое мы определили ранее
+            const LccViewer = window.LCC.LccViewer || (window.LCC.default && window.LCC.default.LccViewer);
+
+            if (!LccViewer) {
+                console.error("Ошибка: Библиотека LCC не загружена.");
+                return;
+            }
 
             const lccManager = new LccViewer({
                 container: document.getElementById('viewer'),
@@ -44,27 +29,19 @@
                 appKey: 'test'
             });
 
-            // Маскируем запросы под браузерные
-            lccManager.onBeforeRequest = (url) => {
-                const fileName = url.split('/').pop().split('&')[0].split('?')[0];
-                // Если SDK запрашивает файл без расширения, пробуем найти его в базе
-                for (let key in driveFiles) {
-                    if (url.includes(key) || fileName === key) {
-                        console.log("Загружаю из облака:", key);
-                        return getUrl(key);
-                    }
-                }
-                return url;
-            };
+            // Прямая ссылка на вашу папку в Netlify (обязательно со слешем в конце)
+            const modelBaseUrl = "https://capable-crisp-77c17e.netlify.app/";
 
-            const metaUrl = getUrl('meta.lcc');
-            lccManager.loadLcc(metaUrl).then(() => {
-                console.log("Связь с Google Диском установлена. Начинаю скачивание 167МБ...");
+            // Загружаем основной файл. SDK сам найдет data.bin и прочее по этому же адресу.
+            lccManager.loadLcc(modelBaseUrl + "meta.lcc").then(() => {
+                console.log("Модель успешно загружена из Netlify!");
+                
+                // Устанавливаем камеру (координаты из вашего файла)
                 if (lccManager.setCameraLookAt) {
                     lccManager.setCameraLookAt(-65, -30, 5);
                 }
             }).catch(err => {
-                console.error("Ошибка доступа! Проверьте CORS-прокси:", err);
+                console.error("Ошибка при загрузке модели:", err);
             });
         };
     </script>
