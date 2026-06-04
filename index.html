@@ -51,6 +51,22 @@
         import { LCCRender } from './sdk/lcc-0.6.0.js';
 
         const loadingEl = document.getElementById('loading-overlay');
+
+        // ==========================================
+        // ХАК ДЛЯ ОБХОДА ОГРАНИЧЕНИЙ GITHUB PAGES + GIT LFS
+        // ==========================================
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            let url = args[0];
+            if (typeof url === 'string' && url.endsWith('assets/myscene/data.bin')) {
+                // Перенаправляем запрос на «сырую» ссылку репозитория, где LFS отдает полный бинарник
+                url = 'https://raw.githubusercontent.com/Ranvanov/xgrids-viewer/main/assets/myscene/data.bin';
+                args[0] = url;
+            }
+            return originalFetch.apply(this, args);
+        };
+        // ==========================================
+
         const scene = new THREE.Scene();
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -114,27 +130,4 @@
         window.LCCRender = LCCRender;
 
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        function render() {
-            if (firstPersonControl?.enabled) {
-                firstPersonControl?.update(clock.getDelta());
-            }
-            LCCRender.update();
-            renderer.render(scene, camera);
-        }
-
-        function animate() {
-            renderer.setAnimationLoop(() => {
-                render();
-            });
-        }
-
-        animate();
-    </script>
-</body>
-
-</html>
+            camera.aspect = window.innerWidth / window.
