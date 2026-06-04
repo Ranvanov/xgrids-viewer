@@ -81,7 +81,6 @@
   </label>
 </div>
 
-<!-- Используем более старую стабильную версию Three.js где OrbitControls работает иначе -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="./lcc-0.6.0.umd.js"></script>
@@ -102,7 +101,8 @@
 
   const MODEL_URL = './models/Тест_угла.lcc';
 
-  const lccViewer = new LCC.Viewer({ scene, camera, renderer });
+  const LCCModule = LCC.default || LCC;
+  const lccViewer = new LCCModule.Viewer({ scene, camera, renderer });
 
   lccViewer.load(MODEL_URL)
     .then(() => {
