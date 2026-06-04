@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Viewer — XGRIDS LCC</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; overflow: hidden; font-family: sans-serif; }
+    #canvas-container { width: 100vw; height: 100vh; }
+
+    #controls {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(0,0,0,0.65);
+      color: #fff;
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      z-index: 10;
+      min-width: 200px;
+    }
+    #controls strong { display: block; margin-bottom: 10px; font-size: 14px; }
+    #controls label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+      cursor: pointer;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      color: #fff;
+      font-size: 18px;
+      z-index: 20;
+      gap: 16px;
+    }
+    #loading.hidden { display: none; }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #444;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Загрузка модели...</span>
+</div>
+
+<div id="canvas-container"></div>
+
+<div id="controls">
+  <strong>⚙️ Управление</strong>
+  <label>
+    <input type="checkbox" id="toggle-sh" checked>
+    Сферические гармоники
+  </label>
+  <label>
+    <input type="checkbox" id="toggle-env" checked>
+    Окружение
+  </label>
+  <label>
+    <input type="checkbox" id="toggle-pointcloud">
+    Режим Point Cloud
+  </label>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+<script src="./lcc-sdk/lcc-web-sdk.js"></script>
+
+<script>
+  const container = document.getElementById('canvas-container');
+  const scene     = new THREE.Scene();
+  const camera    = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 5000);
+  camera.position.set(0, 1, 5);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  container.appendChild(renderer.domElement);
+
+  const orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+  orbitControls.enableDamping = true;
+
+  const MODEL_URL = './models/meta.lcc';
+
+  const lccViewer = new LCC.Viewer({ scene, camera, renderer });
+
+  lccViewer.load(MODEL_URL)
+    .then(() => {
+      document.getElementById('loading').classList.add('hidden');
+    })
+    .catch(err => {
+      document.getElementById('loading').innerHTML =
+        '<span style="color:#ff6b6b">❌ Ошибка загрузки модели</span><br><small>' + err.message + '</small>';
+    });
+
+  document.getElementById('toggle-sh').addEventListener('change', (e) => {
+    lccViewer.setSHEnabled(e.target.checked);
+  });
+  document.getElementById('toggle-env').addEventListener('change', (e) => {
+    lccViewer.setEnvironmentEnabled(e.target.checked);
+  });
+  document.getElementById('toggle-pointcloud').addEventListener('change', (e) => {
+    lccViewer.setPointCloudMode(e.target.checked);
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    orbitControls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>
