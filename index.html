@@ -52,43 +52,46 @@
 
         const loadingEl = document.getElementById('loading-overlay');
 
-        // Кэш для собранного бинарного файла, чтобы скачивать части только один раз
-        let cachedDataBuffer = null;
+        // Храним чистые склеенные данные в виде Blob (идеально для изоляции воркеров)
+        let cachedBlob = null;
 
-        // Перехватчик fetch: на лету склеивает части файла и сохраняет правильный URL-контекст для XGRIDS
         const originalFetch = window.fetch;
         window.fetch = async function(...args) {
             let url = args[0];
+            if (url && typeof url !== 'string') {
+                url = url.toString();
+            }
             
-            if (typeof url === 'string' && url.endsWith('assets/myscene/data.bin')) {
+            if (url && url.includes('assets/myscene/data.bin')) {
                 try {
-                    if (!cachedDataBuffer) {
-                        loadingEl.innerText = "Загрузка геометрии XGRIDS (Часть 1/2)...";
+                    if (!cachedBlob) {
+                        loadingEl.innerText = "Скачивание геометрии XGRIDS (Часть 1/2)...";
                         const res1 = await originalFetch('assets/myscene/data.bin.p1');
                         const buf1 = await res1.arrayBuffer();
 
-                        loadingEl.innerText = "Загрузка геометрии XGRIDS (Часть 2/2)...";
+                        loadingEl.innerText = "Скачивание геометрии XGRIDS (Часть 2/2)...";
                         const res2 = await originalFetch('assets/myscene/data.bin.p2');
                         const buf2 = await res2.arrayBuffer();
 
-                        loadingEl.innerText = "Инициализация трехмерной сцены...";
+                        loadingEl.innerText = "Сборка компонентов модели...";
                         
-                        // Склеиваем массивы байт в ОЗУ
+                        // Создаем точную копию байтов без лишнего выделения памяти
                         const combined = new Uint8Array(buf1.byteLength + buf2.byteLength);
                         combined.set(new Uint8Array(buf1), 0);
                         combined.set(new Uint8Array(buf2), buf1.byteLength);
                         
-                        cachedDataBuffer = combined.buffer;
+                        // Оборачиваем строго в Blob с явным типом
+                        cachedBlob = new Blob([combined], { type: 'application/octet-stream' });
                     }
 
-                    // Возвращаем полноценный HTTP-ответ с бинарными данными
-                    return new Response(cachedDataBuffer, {
+                    // Отдаем новый Response на основе Blob — это исключает деформацию структуры данных
+                    return new Response(cachedBlob, {
                         status: 200,
                         statusText: 'OK',
                         headers: { 'Content-Type': 'application/octet-stream' }
                     });
                 } catch (err) {
-                    loadingEl.innerHTML = "❌ Ошибка загрузки компонентов модели.<br>" + err.message;
+                    loadingEl.innerHTML = "❌ Ошибка склейки чанков.<br>" + err.message;
                     throw err;
                 }
             }
@@ -109,13 +112,11 @@
 
         const clock = new THREE.Clock();
 
-        // Управление от первого лица
         const firstPersonControl = new FirstPersonControls(camera, renderer.domElement);
         firstPersonControl.enabled = true;
         firstPersonControl.movementSpeed = 5;
         firstPersonControl.lookAt(new THREE.Vector3(0, 2, 1));
 
-        // Матрица трансформации координат XGRIDS
         const modelMatrix = new THREE.Matrix4(
             -1, 0, 0, 0,
              0, 0, 1, 0,
@@ -123,17 +124,14 @@
              0, 0, 0, 1
         );
 
-        loadingEl.innerText = "Стриминг облака точек...";
+        loadingEl.innerText = "Подготовка стриминга облака точек...";
 
-        // Формируем чистый базовый путь к текущей папке на сервере
         const basePath = window.location.pathname.endsWith('index.html') 
             ? window.location.pathname.replace('index.html', '') 
             : window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
 
-        // Полный адрес папки с моделью
         const dataUrl = `${window.location.origin}${basePath}assets/myscene/meta.lcc`;
 
-        // Запуск загрузки объекта LCC
         const lccObj = LCCRender.load({
             camera: camera,
             scene: scene,
@@ -148,11 +146,11 @@
             appKey: null  
         }, (mesh) => {
             loadingEl.style.display = 'none';
-            console.log('Lcc object Loaded: ', mesh);
+            console.log('Lcc object Loaded успешно!', mesh);
         }, (percent) => {
-            loadingEl.innerText = 'Отрисовка облака точек: ' + (percent * 100).toFixed(1) + '%';
+            loadingEl.innerText = 'Загрузка данных XGRIDS: ' + (percent * 100).toFixed(0) + '%';
         }, () => {
-            loadingEl.innerHTML = "❌ Ошибка загрузки XGRIDS.<br>Проверьте корректность файлов в assets/myscene/";
+            loadingEl.innerHTML = "❌ Ошибка инициализации структуры XGRIDS.";
         });
 
         window.lccObj = lccObj;
