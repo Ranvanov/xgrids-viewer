@@ -64,7 +64,7 @@
 
         const clock = new THREE.Clock();
 
-        // Управление от первого лица (WASD / Стрелки + мышь)
+        // Управление от первого лица
         const firstPersonControl = new FirstPersonControls(camera, renderer.domElement);
         firstPersonControl.enabled = true;
         firstPersonControl.movementSpeed = 5;
@@ -80,29 +80,33 @@
 
         loadingEl.innerText = "Загрузка 3D-модели (Streaming)...";
 
-        // Запуск загрузки объекта LCC по новой официальной схеме
+        // Формируем чистый базовый путь к текущей папке на сервере
+        const basePath = window.location.pathname.endsWith('index.html') 
+            ? window.location.pathname.replace('index.html', '') 
+            : window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
+
+        // Полный адрес папки с моделью
+        const dataUrl = `${window.location.origin}${basePath}assets/myscene/meta.lcc`;
+
+        // Запуск загрузки объекта LCC
         const lccObj = LCCRender.load({
             camera: camera,
             scene: scene,
-            // Автоматически определяет адрес вашей модели на GitHub Pages
-            dataPath: `${location.origin}${location.pathname.replace('index.html', '')}assets/myscene/meta.lcc`,
+            dataPath: dataUrl,
             renderLib: THREE,
             canvas: renderer.domElement,
             renderer: renderer,
             useEnv: true,
-            useIndexDB: false,       // Отключаем кэш браузера на время тестов
+            useIndexDB: false,       
             useLoadingEffect: true, 
             modelMatrix: modelMatrix, 
             appKey: null  
         }, (mesh) => {
-            // Успешная загрузка
             loadingEl.style.display = 'none';
             console.log('Lcc object Loaded: ', mesh);
         }, (percent) => {
-            // Прогресс загрузки в процентах
             loadingEl.innerText = 'Загрузка данных XGRIDS: ' + (percent * 100).toFixed(1) + '%';
         }, () => {
-            // Ошибка
             loadingEl.innerHTML = "❌ Ошибка загрузки XGRIDS.<br>Проверьте, лежит ли файл meta.lcc в assets/myscene/";
         });
 
