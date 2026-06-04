@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XGRIDS LCC 3D Viewer</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: https://raw.githubusercontent.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline';">
 </head>
 <style>
     html, body {
@@ -130,4 +131,27 @@
         window.LCCRender = LCCRender;
 
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        function render() {
+            if (firstPersonControl?.enabled) {
+                firstPersonControl?.update(clock.getDelta());
+            }
+            LCCRender.update();
+            renderer.render(scene, camera);
+        }
+
+        function animate() {
+            renderer.setAnimationLoop(() => {
+                render();
+            });
+        }
+
+        animate();
+    </script>
+</body>
+
+</html>
