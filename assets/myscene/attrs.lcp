@@ -1,3 +1,1 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a4eb65401660da1719af26d39130b271686f7d399e4474773ece9a6530a36894
-size 578
+{"version":"1.0.1","name":"Тест угла","guid":"ipmvz-cloud-207640-822","description":"XGrids all right reserved","createTime":"2025-12-18 11:07:00","modifyTime":"","thumbnail":"thumb.jpg","sceneModified":false,"spawnPoint":{"position":[0,0,1.6],"rotation":[0.7071068,0,0,0.7071067]},"transform":{"position":[0,0,0],"rotation":[0,0,0,1],"scale":[1,1,1]},"skyBox":null,"miniMap":null,"poi":null,"trigger":null,"annotation":null,"barrier":null,"collider":{"simpleMesh":{"type":"ply","path":"collision.lci"}},"clipBox":null,"models":null,"poses":{"path":"assets/poses.json"}}
