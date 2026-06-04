@@ -1,151 +1,89 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Viewer — XGRIDS LCC</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #111; overflow: hidden; font-family: sans-serif; }
-    #canvas-container { width: 100vw; height: 100vh; }
-
-    #controls {
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      background: rgba(0,0,0,0.65);
-      color: #fff;
-      padding: 14px 18px;
-      border-radius: 10px;
-      font-size: 13px;
-      z-index: 10;
-      min-width: 200px;
-    }
-    #controls strong { display: block; margin-bottom: 10px; font-size: 14px; }
-    #controls label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 8px 0;
-      cursor: pointer;
-    }
-
-    #loading {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #111;
-      color: #fff;
-      font-size: 18px;
-      z-index: 20;
-      gap: 16px;
-    }
-    #loading.hidden { display: none; }
-
-    .spinner {
-      width: 48px;
-      height: 48px;
-      border: 4px solid #444;
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XGRIDS LCC 3D Viewer</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
+        #canvas-container { width: 100%; height: 100%; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #fff; font-family: sans-serif; font-size: 18px; pointer-events: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="./lcc-0.6.0.umd.js"></script>
 </head>
 <body>
 
-<div id="loading">
-  <div class="spinner"></div>
-  <span>Загрузка модели...</span>
-</div>
+    <div id="loading">Загрузка 3D-сцены XGRIDS...</div>
+    <div id="canvas-container"></div>
 
-<div id="canvas-container"></div>
+    <script>
+        // Ждем, пока загрузится вся страница и библиотеки
+        window.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('canvas-container');
+            const loadingEl = document.getElementById('loading');
 
-<div id="controls">
-  <strong>⚙️ Управление</strong>
-  <label>
-    <input type="checkbox" id="toggle-sh" checked>
-    Сферические гармоники
-  </label>
-  <label>
-    <input type="checkbox" id="toggle-env" checked>
-    Окружение
-  </label>
-  <label>
-    <input type="checkbox" id="toggle-pointcloud">
-    Режим Point Cloud
-  </label>
-</div>
+            // 1. Создаем стандартную сцену Three.js
+            const scene = new THREE.Scene();
+            
+            // 2. Настраиваем камеру
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 10);
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="./lcc-0.6.0.umd.js"></script>
+            // 3. Создаем рендерер
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
 
-<script>
-  const container = document.getElementById('canvas-container');
-  const scene     = new THREE.Scene();
-  const camera    = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 5000);
-  camera.position.set(0, 1, 5);
+            // 4. Инициализируем рендерер XGRIDS LCC
+            // В версии 0.6.0.umd объект библиотеки обычно доступен в глобальной переменной LCC
+            if (typeof LCC === 'undefined') {
+                loadingEl.innerText = "Ошибка: Библиотека LCC не загрузилась. Проверьте имя файла SDK.";
+                return;
+            }
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  container.appendChild(renderer.domElement);
+            // Создаем экземпляр LCC Рендерера
+            const lccRenderer = new LCC.LCCRenderer(renderer, scene, camera);
 
-  const orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
-  orbitControls.enableDamping = true;
+            // 5. Загружаем вашу модель из папки models
+            // Замените 'scene.lcc' на точное имя вашего файла, если оно другое (например, с расширением .lcc или .ply)
+            const modelUrl = './models/scene.lcc'; 
 
-  const MODEL_URL = './models/Тест_угла.lcc';
+            lccRenderer.load(modelUrl).then(() => {
+                // Скрываем надпись загрузки, когда модель отобразилась
+                loadingEl.style.display = 'none';
+                console.log("Модель XGRIDS успешно загружена!");
+                
+                // Запускаем цикл отрисовки
+                animate();
+            }).catch(err => {
+                loadingEl.innerText = "Ошибка при загрузке файла модели.";
+                console.error("Ошибка LCC:", err);
+            });
 
-  const lccViewer = LCC.LCCRender; // ✅ синглтон, без new
+            // Цикл анимации
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // Обязательное обновление состояния XGRIDS (для динамической подгрузки деталей)
+                if (lccRenderer && lccRenderer.update) {
+                    lccRenderer.update();
+                }
+                
+                renderer.render(scene, camera);
+            }
 
-  lccViewer.load({
-    url: MODEL_URL,
-    scene,
-    camera,
-    renderer
-  })
-    .then(() => {
-      document.getElementById('loading').classList.add('hidden');
-    })
-    .catch(err => {
-      document.getElementById('loading').innerHTML =
-        '<span style="color:#ff6b6b">❌ Ошибка загрузки модели</span><br><small>' + (err?.message || err) + '</small>';
-    });
-
-  // Управление — вызываем только методы которые реально есть в SDK
-  document.getElementById('toggle-sh').addEventListener('change', (e) => {
-    if (typeof lccViewer.update === 'function') {
-      lccViewer.update({ sh: e.target.checked });
-    }
-  });
-  document.getElementById('toggle-env').addEventListener('change', (e) => {
-    if (typeof lccViewer.update === 'function') {
-      lccViewer.update({ environment: e.target.checked });
-    }
-  });
-  document.getElementById('toggle-pointcloud').addEventListener('change', (e) => {
-    if (typeof lccViewer.update === 'function') {
-      lccViewer.update({ pointCloud: e.target.checked });
-    }
-  });
-
-  function animate() {
-    requestAnimationFrame(animate);
-    orbitControls.update();
-    renderer.render(scene, camera);
-  }
-  animate();
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-</script>
+            // Следим за изменением размеров окна браузера
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        });
+    </script>
 </body>
 </html>
