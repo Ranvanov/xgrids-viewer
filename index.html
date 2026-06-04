@@ -101,25 +101,37 @@
 
   const MODEL_URL = './models/Тест_угла.lcc';
 
-  const lccViewer = new LCC.LCCRender({ scene, camera, renderer });
+  const lccViewer = LCC.LCCRender; // ✅ синглтон, без new
 
-  lccViewer.load(MODEL_URL)
+  lccViewer.load({
+    url: MODEL_URL,
+    scene,
+    camera,
+    renderer
+  })
     .then(() => {
       document.getElementById('loading').classList.add('hidden');
     })
     .catch(err => {
       document.getElementById('loading').innerHTML =
-        '<span style="color:#ff6b6b">❌ Ошибка загрузки модели</span><br><small>' + err.message + '</small>';
+        '<span style="color:#ff6b6b">❌ Ошибка загрузки модели</span><br><small>' + (err?.message || err) + '</small>';
     });
 
+  // Управление — вызываем только методы которые реально есть в SDK
   document.getElementById('toggle-sh').addEventListener('change', (e) => {
-    lccViewer.setSHEnabled(e.target.checked);
+    if (typeof lccViewer.update === 'function') {
+      lccViewer.update({ sh: e.target.checked });
+    }
   });
   document.getElementById('toggle-env').addEventListener('change', (e) => {
-    lccViewer.setEnvironmentEnabled(e.target.checked);
+    if (typeof lccViewer.update === 'function') {
+      lccViewer.update({ environment: e.target.checked });
+    }
   });
   document.getElementById('toggle-pointcloud').addEventListener('change', (e) => {
-    lccViewer.setPointCloudMode(e.target.checked);
+    if (typeof lccViewer.update === 'function') {
+      lccViewer.update({ pointCloud: e.target.checked });
+    }
   });
 
   function animate() {
