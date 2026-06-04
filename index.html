@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XGRIDS LCC 3D Viewer</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: https://raw.githubusercontent.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline';">
 </head>
 <style>
     html, body {
@@ -52,105 +51,122 @@
         import { LCCRender } from './sdk/lcc-0.6.0.js';
 
         const loadingEl = document.getElementById('loading-overlay');
+        
+        let modelBlobUrl = null;
 
-        // ==========================================
-        // ХАК ДЛЯ ОБХОДА ОГРАНИЧЕНИЙ GITHUB PAGES + GIT LFS
-        // ==========================================
+        // Предварительная загрузка и склейка частей data.bin перед стартом плеера
+        async function bootstrapXgrids() {
+            try {
+                loadingEl.innerText = "Распаковка геометрии XGRIDS (Часть 1/2)...";
+                const res1 = await fetch('assets/myscene/data.bin.p1');
+                const buf1 = await res1.arrayBuffer();
+
+                loadingEl.innerText = "Распаковка геометрии XGRIDS (Часть 2/2)...";
+                const res2 = await fetch('assets/myscene/data.bin.p2');
+                const buf2 = await res2.arrayBuffer();
+
+                loadingEl.innerText = "Сборка облака точек...";
+                const finalBlob = new Blob([buf1, buf2], { type: 'application/octet-stream' });
+                modelBlobUrl = URL.createObjectURL(finalBlob);
+
+                initPlayer();
+            } catch (err) {
+                loadingEl.innerHTML = "❌ Ошибка склейки файлов модели.<br>" + err.message;
+                console.error(err);
+            }
+        }
+
+        // Перехватчик fetch для подмены data.bin на собранный в памяти Blob
         const originalFetch = window.fetch;
         window.fetch = async function(...args) {
             let url = args[0];
             if (typeof url === 'string' && url.endsWith('assets/myscene/data.bin')) {
-                // Перенаправляем запрос на «сырую» ссылку репозитория, где LFS отдает полный бинарник
-                url = 'https://raw.githubusercontent.com/Ranvanov/xgrids-viewer/main/assets/myscene/data.bin';
-                args[0] = url;
+                if (modelBlobUrl) {
+                    args[0] = modelBlobUrl; // Подменяем запрос на ссылку в ОЗУ
+                }
             }
             return originalFetch.apply(this, args);
         };
-        // ==========================================
 
-        const scene = new THREE.Scene();
+        function initPlayer() {
+            const scene = new THREE.Scene();
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setClearColor(0x000000);
-        document.body.appendChild(renderer.domElement);
-
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 150000);
-        camera.position.set(0, 2, 0);
-
-        const clock = new THREE.Clock();
-
-        // Управление от первого лица
-        const firstPersonControl = new FirstPersonControls(camera, renderer.domElement);
-        firstPersonControl.enabled = true;
-        firstPersonControl.movementSpeed = 5;
-        firstPersonControl.lookAt(new THREE.Vector3(0, 2, 1));
-
-        // Матрица трансформации координат XGRIDS
-        const modelMatrix = new THREE.Matrix4(
-            -1, 0, 0, 0,
-             0, 0, 1, 0,
-             0, 1, 0, 0,
-             0, 0, 0, 1
-        );
-
-        loadingEl.innerText = "Загрузка 3D-модели (Streaming)...";
-
-        // Формируем чистый базовый путь к текущей папке на сервере
-        const basePath = window.location.pathname.endsWith('index.html') 
-            ? window.location.pathname.replace('index.html', '') 
-            : window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
-
-        // Полный адрес папки с моделью
-        const dataUrl = `${window.location.origin}${basePath}assets/myscene/meta.lcc`;
-
-        // Запуск загрузки объекта LCC
-        const lccObj = LCCRender.load({
-            camera: camera,
-            scene: scene,
-            dataPath: dataUrl,
-            renderLib: THREE,
-            canvas: renderer.domElement,
-            renderer: renderer,
-            useEnv: true,
-            useIndexDB: false,       
-            useLoadingEffect: true, 
-            modelMatrix: modelMatrix, 
-            appKey: null  
-        }, (mesh) => {
-            loadingEl.style.display = 'none';
-            console.log('Lcc object Loaded: ', mesh);
-        }, (percent) => {
-            loadingEl.innerText = 'Загрузка данных XGRIDS: ' + (percent * 100).toFixed(1) + '%';
-        }, () => {
-            loadingEl.innerHTML = "❌ Ошибка загрузки XGRIDS.<br>Проверьте, лежит ли файл meta.lcc в assets/myscene/";
-        });
-
-        window.lccObj = lccObj;
-        window.LCCRender = LCCRender;
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000);
+            document.body.appendChild(renderer.domElement);
 
-        function render() {
-            if (firstPersonControl?.enabled) {
-                firstPersonControl?.update(clock.getDelta());
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 150000);
+            camera.position.set(0, 2, 0);
+
+            const clock = new THREE.Clock();
+
+            const firstPersonControl = new FirstPersonControls(camera, renderer.domElement);
+            firstPersonControl.enabled = true;
+            firstPersonControl.movementSpeed = 5;
+            firstPersonControl.lookAt(new THREE.Vector3(0, 2, 1));
+
+            const modelMatrix = new THREE.Matrix4(
+                -1, 0, 0, 0,
+                 0, 0, 1, 0,
+                 0, 1, 0, 0,
+                 0, 0, 0, 1
+            );
+
+            loadingEl.innerText = "Загрузка 3D-модели (Streaming)...";
+
+            const basePath = window.location.pathname.endsWith('index.html') 
+                ? window.location.pathname.replace('index.html', '') 
+                : window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
+
+            const dataUrl = `${window.location.origin}${basePath}assets/myscene/meta.lcc`;
+
+            const lccObj = LCCRender.load({
+                camera: camera,
+                scene: scene,
+                dataPath: dataUrl,
+                renderLib: THREE,
+                canvas: renderer.domElement,
+                renderer: renderer,
+                useEnv: true,
+                useIndexDB: false,       
+                useLoadingEffect: true, 
+                modelMatrix: modelMatrix, 
+                appKey: null  
+            }, (mesh) => {
+                loadingEl.style.display = 'none';
+                console.log('Lcc object Loaded: ', mesh);
+            }, (percent) => {
+                loadingEl.innerText = 'Загрузка данных XGRIDS: ' + (percent * 100).toFixed(1) + '%';
+            }, () => {
+                loadingEl.innerHTML = "❌ Ошибка загрузки XGRIDS.<br>Проверьте, лежит ли файл meta.lcc в assets/myscene/";
+            });
+
+            window.lccObj = lccObj;
+            window.LCCRender = LCCRender;
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            function render() {
+                if (firstPersonControl?.enabled) {
+                    firstPersonControl?.update(clock.getDelta());
+                }
+                LCCRender.update();
+                renderer.render(scene, camera);
             }
-            LCCRender.update();
-            renderer.render(scene, camera);
-        }
 
-        function animate() {
             renderer.setAnimationLoop(() => {
                 render();
             });
         }
 
-        animate();
+        // Запускаем процесс
+        bootstrapXgrids();
     </script>
 </body>
 

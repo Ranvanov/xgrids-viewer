@@ -27,13 +27,13 @@ INFO(chunker.cpp:821): Environment Data create finished , free file stream succe
 INFO(chunker.cpp:371): handleEnvironment finished .
 INFO(indexer.cpp:68): Index finished ,Start create meta data 
 INFO(indexer.cpp:73): All tasks finished .
-INFO(meshSplit.cpp:388): parsing 4.34448mb in 0.0352637 seconds [123.2 MBps]
-INFO(meshSplit.cpp:391): Read 135672 total vertices 
-INFO(meshSplit.cpp:393): Read 208936 total faces (triangles) 
+INFO(meshSplit.cpp:388): parsing 0.327991mb in 0.00301233 seconds [108.883 MBps]
+INFO(meshSplit.cpp:391): Read 9250 total vertices 
+INFO(meshSplit.cpp:393): Read 16673 total faces (triangles) 
 INFO(meshSplit.cpp:412): xyzOrder is 012
 INFO(meshSplit.cpp:437): face list count: 3
-INFO(meshSplit.cpp:551): grid size: 2 x 4
+INFO(meshSplit.cpp:551): grid size: 1 x 1
 INFO(meshSplit.cpp:667): split done ...
-INFO(meshSplit.cpp:958): dump mesh num: 4
+INFO(meshSplit.cpp:958): dump mesh num: 1
 INFO(meshSplit.cpp:1009): save done...
 INFO(meshSplit.cpp:1156): meshSplit success !!!
