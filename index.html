@@ -27,6 +27,8 @@
             font-size: 18px; 
             pointer-events: none;
             text-align: center;
+            max-width: 80%;
+            line-height: 1.5;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -34,7 +36,7 @@
 </head>
 <body>
 
-    <div id="loading">Загрузка 3D-модели XGRIDS...</div>
+    <div id="loading">Загрузка 3D-модели XGRIDS из Git LFS...<br><small style="font-size: 13px; color: #aaa;">(Большие файлы могут загружаться несколько минут)</small></div>
     <div id="canvas-container"></div>
 
     <script>
@@ -42,44 +44,49 @@
             const container = document.getElementById('canvas-container');
             const loadingEl = document.getElementById('loading');
 
-            // 1. Создаем сцену Three.js
+            // 1. Создаем стандартную сцену Three.js
             const scene = new THREE.Scene();
             
             // 2. Настраиваем камеру
             const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 5, 10);
 
-            // 3. Создаем стандартный рендерер
+            // 3. Создаем рендерер Three.js
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             container.appendChild(renderer.domElement);
 
-            // 4. Инициализируем рендерер XGRIDS, используя точное имя LCCRender
-            // Передаем ему наши настройки: renderer, scene и camera
+            // 4. Проверяем наличие библиотеки XGRIDS
+            if (typeof LCC === 'undefined') {
+                loadingEl.innerText = "Ошибка: Библиотека LCC не загрузилась.";
+                return;
+            }
+
+            // Инициализируем рендерер, используя подтвержденный класс LCCRender
             const lccRenderer = new LCC.LCCRender(renderer, scene, camera);
 
-            // 5. Указываем путь к переименованному файлу модели
-            const modelUrl = './models/scene.txt'; 
+            // 5. Прямая ссылка на медиа-сервер GitHub для обхода ограничений Git LFS
+            const modelUrl = 'https://media.githubusercontent.com/media/ranvanov/xgrids-viewer/main/models/scene.txt'; 
 
-            // Запускаем загрузку
+            // Запускаем загрузку тяжелой модели
             lccRenderer.load(modelUrl).then(() => {
-                // Как только модель прочитана, убираем надпись загрузки
+                // Скрываем надпись загрузки, когда модель отобразилась
                 loadingEl.style.display = 'none';
                 console.log("Модель XGRIDS успешно загружена!");
                 
-                // Запускаем бесконечный цикл отрисовки
+                // Запускаем цикл отрисовки (анимации)
                 animate();
             }).catch(err => {
-                loadingEl.innerText = "Ошибка загрузки файла модели. Проверьте размер файла в папке models.";
-                console.error("Ошибка загрузки:", err);
+                loadingEl.innerHTML = "Ошибка при загрузке файла модели.<br>Возможно, файл еще не синхронизировался на серверах LFS или поврежден.";
+                console.error("Ошибка LCC:", err);
             });
 
-            // Цикл отрисовки кадров
+            // Цикл анимации
             function animate() {
                 requestAnimationFrame(animate);
                 
-                // Просим движок XGRIDS обновить кадр (стриминг точек)
+                // Обновляем состояние XGRIDS (необходимо для стриминга данных)
                 if (lccRenderer && typeof lccRenderer.update === 'function') {
                     lccRenderer.update();
                 }
@@ -87,7 +94,7 @@
                 renderer.render(scene, camera);
             }
 
-            // Корректировка при изменении размеров экрана (например, на смартфонах)
+            // Адаптация под изменение размеров экрана
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
