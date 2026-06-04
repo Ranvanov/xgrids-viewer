@@ -101,8 +101,7 @@
 
   const MODEL_URL = './models/Тест_угла.lcc';
 
-  const LCCModule = LCC.default || LCC;
-  const lccViewer = new LCCModule.Viewer({ scene, camera, renderer });
+  const lccViewer = new LCC.LCCRender({ scene, camera, renderer });
 
   lccViewer.load(MODEL_URL)
     .then(() => {
